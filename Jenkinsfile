@@ -1,41 +1,35 @@
 pipeline {
-  agent any
+  agent any  // Runs on the Built-In Node (your Windows machine)
   stages {
     stage('Terraform Init') {
       steps {
-        dir('jenkins-aws-infra') {
-          withCredentials([
-            string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-          ]) {
-            bat 'terraform init'
-          }
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          bat 'terraform init'
         }
       }
     }
 
-    stage('Terraform plan') {
+    stage('Terraform Plan') {
       steps {
-        dir('jenkins-aws-infra') {
-          withCredentials([
-            string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-          ]) {
-            bat 'terraform plan'
-          }
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          bat 'terraform plan'
         }
       }
     }
-    
+
     stage('Terraform Apply') {
       steps {
-        dir('jenkins-aws-infra') {
-          withCredentials([
-            string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-          ]) {
-            bat 'terraform apply -auto-approve'
-          }
+        withCredentials([
+          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          bat 'terraform apply -auto-approve'
         }
       }
     }
