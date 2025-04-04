@@ -1,37 +1,56 @@
 pipeline {
-  agent any  // Runs on the Built-In Node (your Windows machine)
+  agent any
+
+  parameters {
+    booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply without asking?')
+    choice(name: 'action', choices: ['apply', 'destroy'], description: 'Terraform action to perform')
+  }
+
+  environment {
+    AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+    AWS_DEFAULT_REGION    = 'us-east-1'
+  }
+
   stages {
     stage('Terraform Init') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          bat 'terraform init'
-        }
+        bat 'terraform init'
       }
     }
 
     stage('Terraform Plan') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          bat 'terraform plan'
-        }
+        bat 'terraform plan -out=tfplan'
+        bat 'terraform show -no-color tfplan > tfplan.txt'
       }
     }
 
-    stage('Terraform Apply') {
+    stage('Terraform Apply / Destroy') {
       steps {
-        withCredentials([
-          string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-          string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-          bat 'terraform apply -auto-approve'
+        script {
+          if (params.action == 'apply') {
+            if (!params.autoApprove) {
+              def plan = readFile('tfplan.txt')
+              input message: "Do you want to apply this Terraform plan?",
+                parameters: [
+                  text(name: 'Plan', description: 'Review the plan before proceeding', defaultValue: plan)
+                ]
+            }
+            bat 'terraform apply -input=false tfplan'
+          } else if (params.action == 'destroy') {
+            bat 'terraform destroy -auto-approve'
+          } else {
+            error "Invalid action selected. Please choose either 'apply' or 'destroy'."
+          }
         }
       }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'tfplan.txt', onlyIfSuccessful: true
     }
   }
 }
