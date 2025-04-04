@@ -26,8 +26,7 @@ pipeline {
         }
       }
     }
-  }
-}
+    
     stage('Terraform Apply') {
       steps {
         dir('jenkins-aws-infra') {
